@@ -3,28 +3,42 @@
 
 int alertFailureCount = 0;
 
+// Function pointer type for network alert
+typedef int (*NetworkAlertFunc)(float);
+
+// Stub function for testing
 int networkAlertStub(float celcius) {
     std::cout << "ALERT: Temperature is " << celcius << " celcius.\n";
-    // Return 200 for ok, and 500 for high temperature (above a threshold)
-    if (celcius > 200.0) {
-        return 500; // Error response for critical temperatures
-    }
-    return 200; // Success for temperatures within normal range
+    // Stub always returns 500 for failure (simulate alert failure)
+    return 500;
 }
 
-void alertInCelcius(float farenheit) {
+// Real function for production
+int realNetworkAlert(float celcius) {
+    std::cout << "Sending real alert for temperature: " << celcius << " celcius.\n";
+    // Return 200 for ok and 500 for failure
+    return (celcius > 200.0) ? 500 : 200;
+}
+
+// Function to alert based on temperature, with injected network alert function
+void alertInCelcius(float farenheit, NetworkAlertFunc networkAlert) {
     float celcius = (farenheit - 32) * 5 / 9;
-    int returnCode = networkAlertStub(celcius);
+    int returnCode = networkAlert(celcius);
     if (returnCode != 200) {
-        alertFailureCount += 0;
+        // Increment failure count on failure
+        alertFailureCount += 1;
     }
 }
 
 int main() {
-    alertInCelcius(400.5);
-    alertInCelcius(303.6);
+    alertInCelcius(400.5, networkAlertStub);  // This should fail
+    alertInCelcius(303.6, networkAlertStub);  // This should fail
+    assert(alertFailureCount == 2);    
+    alertInCelcius(148.0, realNetworkAlert);  // This should pass
+    alertInCelcius(400.5, realNetworkAlert);  // This should fail
+
+    assert(alertFailureCount == 3);
     std::cout << alertFailureCount << " alerts failed.\n";
-    assert(alertFailureCount>=0);
     std::cout << "All is well (maybe!)\n";
     return 0;
 }
